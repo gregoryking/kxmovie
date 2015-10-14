@@ -67,8 +67,8 @@ static NSMutableDictionary * gHistory;
 
 #define LOCAL_MIN_BUFFERED_DURATION   0.2
 #define LOCAL_MAX_BUFFERED_DURATION   0.4
-#define NETWORK_MIN_BUFFERED_DURATION 2.0
-#define NETWORK_MAX_BUFFERED_DURATION 4.0
+#define NETWORK_MIN_BUFFERED_DURATION 0.0
+#define NETWORK_MAX_BUFFERED_DURATION 0.0001
 
 @interface KxMovieViewController () {
 
@@ -684,6 +684,10 @@ _messageLabel.hidden = YES;
             if (_activityIndicatorView.isAnimating) {
                 
                 [_activityIndicatorView stopAnimating];
+                
+                // Force to be minimal latecny
+                [self setMoviePosition:_moviePosition+0.0];
+                
                 // if (self.view.window)
                 [self restorePlay];
             }
@@ -1056,6 +1060,7 @@ _messageLabel.hidden = YES;
     if (_buffered && ((_bufferedDuration > _minBufferedDuration) || _decoder.isEOF)) {
         
         _tickCorrectionTime = 0;
+        [self freeBufferedFrames];
         _buffered = NO;
         [_activityIndicatorView stopAnimating];        
     }
@@ -1072,12 +1077,6 @@ _messageLabel.hidden = YES;
         
         if (0 == leftFrames) {
             
-            if (_decoder.isEOF) {
-                
-                [self pause];
-                [self updateHUD];
-                return;
-            }
             
             if (_minBufferedDuration > 0 && !_buffered) {
                                 
@@ -1129,8 +1128,6 @@ _messageLabel.hidden = YES;
     if (correction > 1.f || correction < -1.f) {
         
         LoggerStream(1, @"tick correction reset %.2f", correction);
-        correction = 0;
-        _tickCorrectionTime = 0;
     }
     
     return correction;
