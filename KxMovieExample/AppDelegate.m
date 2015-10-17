@@ -11,6 +11,7 @@
 
 #import "AppDelegate.h"
 #import "MainViewController.h"
+#import "KxLogger.h"
 
 @implementation AppDelegate
 
@@ -25,7 +26,25 @@
 
     LoggerApp(1, @"Application didFinishLaunchingWithOptions");
 
+    [NSTimer scheduledTimerWithTimeInterval:25.0
+                                     target:self
+                                   selector:@selector(disableIdleTimer)
+                                   userInfo:nil
+                                    repeats:YES];
+
+    
     return YES;
+}
+
+-(void)disableIdleTimer
+{
+    
+#ifdef DEBUG
+    LoggerStream(0, @"Disabling idle timer (repeat operation)");
+#endif
+    UIApplication *myApplication = [UIApplication sharedApplication];
+    myApplication.idleTimerDisabled = NO;
+    myApplication.idleTimerDisabled = YES;
 }
 
 - (void)applicationWillResignActive:(UIApplication *)application
