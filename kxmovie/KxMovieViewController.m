@@ -1060,7 +1060,6 @@ _messageLabel.hidden = YES;
     if (_buffered && ((_bufferedDuration > _minBufferedDuration) || _decoder.isEOF)) {
         
         _tickCorrectionTime = 0;
-        [self freeBufferedFrames];
         _buffered = NO;
         [_activityIndicatorView stopAnimating];        
     }
@@ -1128,7 +1127,7 @@ _messageLabel.hidden = YES;
     if (correction > 1.f || correction < -1.f) {
         
         LoggerStream(1, @"tick correction reset %.2f", correction);
-        [self freeBufferedFrames];
+        [self setMoviePosition:_moviePosition+0.0];
     }
     
     return correction;
