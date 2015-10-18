@@ -40,7 +40,7 @@
 {
     
 #ifdef DEBUG
-    LoggerStream(0, @"Disabling idle timer (repeat operation)");
+//    LoggerStream(0, @"Disabling idle timer (repeat operation)");
 #endif
     UIApplication *myApplication = [UIApplication sharedApplication];
     myApplication.idleTimerDisabled = NO;

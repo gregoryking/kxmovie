@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		374FB1DA1BD2FABD00FB8F86 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 374FB1D91BD2FABD00FB8F86 /* AVFoundation.framework */; };
 		375DA9821BC713960051A18A /* asu_pid.entitlements in Resources */ = {isa = PBXBuildFile; fileRef = 375DA9811BC713960051A18A /* asu_pid.entitlements */; };
 		8704657C16F6ECA000D4083E /* libiconv.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 8704657A16F6EC9100D4083E /* libiconv.dylib */; };
 		87E793FD16390F6D000A0848 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 87E793FC16390F6D000A0848 /* UIKit.framework */; };
@@ -64,6 +65,7 @@
 
 /* Begin PBXFileReference section */
 		07D459C0599C42B1906B39AD /* Pods.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.xcconfig; path = Pods/Pods.xcconfig; sourceTree = "<group>"; };
+		374FB1D91BD2FABD00FB8F86 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.4.sdk/System/Library/Frameworks/AVFoundation.framework; sourceTree = DEVELOPER_DIR; };
 		375DA9811BC713960051A18A /* asu_pid.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = asu_pid.entitlements; sourceTree = "<group>"; };
 		49D953B9D2DC48FBB580C6AC /* libPods.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libPods.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		4E6AB9BC191288370010CAA1 /* kxmovie-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "kxmovie-Prefix.pch"; sourceTree = "<group>"; };
@@ -112,6 +114,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				374FB1DA1BD2FABD00FB8F86 /* AVFoundation.framework in Frameworks */,
 				8704657C16F6ECA000D4083E /* libiconv.dylib in Frameworks */,
 				87E7945116391BC1000A0848 /* libz.dylib in Frameworks */,
 				87E7944A16391B9E000A0848 /* libavcodec.a in Frameworks */,
@@ -174,6 +177,7 @@
 		87E793FB16390F6D000A0848 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				374FB1D91BD2FABD00FB8F86 /* AVFoundation.framework */,
 				8704657A16F6EC9100D4083E /* libiconv.dylib */,
 				87E7944416391B9E000A0848 /* libavcodec.a */,
 				87E7944616391B9E000A0848 /* libavformat.a */,
@@ -287,6 +291,11 @@
 				TargetAttributes = {
 					87E793F716390F6D000A0848 = {
 						DevelopmentTeam = 82J7XA77JC;
+						SystemCapabilities = {
+							com.apple.BackgroundModes = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};

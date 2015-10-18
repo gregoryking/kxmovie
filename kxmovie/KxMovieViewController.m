@@ -130,7 +130,7 @@ static NSMutableDictionary * gHistory;
     BOOL                _buffered;
     
     BOOL                _savedIdleTimer;
-    
+    BOOL                _appActive;
     NSDictionary        *_parameters;
 }
 
@@ -394,6 +394,24 @@ _messageLabel.hidden = YES;
     }
 }
 
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    
+    // Set AVAudioSession
+    NSError *sessionError = nil;
+    [[AVAudioSession sharedInstance] setDelegate:self];
+    [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord error:&sessionError];
+    
+    // Change the default output audio route
+    UInt32 doChangeDefaultRoute = 1;
+    AudioSessionSetProperty(kAudioSessionProperty_OverrideCategoryDefaultToSpeaker,
+                            sizeof(doChangeDefaultRoute), &doChangeDefaultRoute);
+    
+    _appActive = YES;
+}
+
+
 - (void) viewDidAppear:(BOOL)animated
 {
     // LoggerStream(1, @"viewDidAppear");
@@ -424,6 +442,12 @@ _messageLabel.hidden = YES;
                                              selector:@selector(applicationWillResignActive:)
                                                  name:UIApplicationWillResignActiveNotification
                                                object:[UIApplication sharedApplication]];
+
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(applicationDidBecomeActive:)
+                                                 name:UIApplicationDidBecomeActiveNotification
+                                               object:[UIApplication sharedApplication]];
+
 }
 
 - (void) viewWillDisappear:(BOOL)animated
@@ -432,7 +456,7 @@ _messageLabel.hidden = YES;
     
     [super viewWillDisappear:animated];
     
-    [_activityIndicatorView stopAnimating];
+ /*   [_activityIndicatorView stopAnimating];
     
     if (_decoder) {
         
@@ -453,7 +477,7 @@ _messageLabel.hidden = YES;
     [_activityIndicatorView stopAnimating];
     _buffered = NO;
     _interrupted = YES;
-    
+    */
     LoggerStream(1, @"viewWillDisappear %@", self);
 }
 
@@ -464,10 +488,19 @@ _messageLabel.hidden = YES;
 
 - (void) applicationWillResignActive: (NSNotification *)notification
 {
-    [self showHUD:YES];
-    [self pause];
+    _appActive = NO;
+//    [self showHUD:YES];
+//    [self pause];
     
     LoggerStream(1, @"applicationWillResignActive");
+}
+
+- (void) applicationDidBecomeActive: (NSNotification *)notification
+{
+    _appActive =YES;
+    [self showHUD:YES];
+
+    LoggerStream(1, @"applicationDidBecomeActive");
 }
 
 #pragma mark - gesture recognizer
@@ -1098,8 +1131,10 @@ _messageLabel.hidden = YES;
         });
     }
     
-    if ((_tickCounter++ % 3) == 0) {
+    if ((_tickCounter++ % 3) == 0 && _appActive) {
         [self updateHUD];
+        LoggerStream(1, @"Updating HUD");
+
     }
 }
 
@@ -1178,16 +1213,18 @@ _messageLabel.hidden = YES;
 
 - (CGFloat) presentVideoFrame: (KxVideoFrame *) frame
 {
-    if (_glView) {
-        
-        [_glView render:frame];
-        
-    } else {
-        
-        KxVideoFrameRGB *rgbFrame = (KxVideoFrameRGB *)frame;
-        _imageView.image = [rgbFrame asImage];
+//    _appActive = ([[UIApplication sharedApplication] applicationState] == UIApplicationStateActive);
+    if (_appActive) {
+        if (_glView) {
+            
+            [_glView render:frame];
+            
+        } else {
+            
+            KxVideoFrameRGB *rgbFrame = (KxVideoFrameRGB *)frame;
+            _imageView.image = [rgbFrame asImage];
+        }
     }
-    
     _moviePosition = frame.position;
         
     return frame.duration;
