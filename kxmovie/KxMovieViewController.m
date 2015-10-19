@@ -1129,12 +1129,8 @@ _messageLabel.hidden = YES;
     if (correction > 1.f || correction < -1.f) {
         
         LoggerStream(1, @"tick correction reset %.2f", correction);
-<<<<<<< HEAD
         correction = 0;
         _tickCorrectionTime = 0;
-=======
-        [self freeBufferedFrames];
->>>>>>> dea0193... Adding freeBufferedFrames to tickCorrection to prevent deviation from live.
     }
     
     return correction;
