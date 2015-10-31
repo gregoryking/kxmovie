@@ -1087,6 +1087,7 @@ _messageLabel.hidden = YES;
                                 
                 _buffered = YES;
                 [_activityIndicatorView startAnimating];
+                self.decoding = NO;
             }
         }
         
@@ -1126,16 +1127,12 @@ _messageLabel.hidden = YES;
     NSTimeInterval dPosition = _moviePosition - _tickCorrectionPosition;
     NSTimeInterval dTime = now - _tickCorrectionTime;
     NSTimeInterval correction = dPosition - dTime;
-    
-    //if ((_tickCounter % 200) == 0)
-    //    LoggerStream(1, @"tick correction %.4f", correction);
-    
+#ifdef DEBUG
+    LoggerStream(1, @"CORRECTION ON CALL IS %.2f", correction);
+#endif
     if (correction > 0.5f || correction < -0.5f) {
         [self setMoviePosition:_moviePosition+0.0];
-//        [self freeBufferedFrames];
         LoggerStream(1, @"tick correction reset %.2f", correction);
-//        correction = 0;
-//        _tickCorrectionTime = 0;
     }
     
     return correction;
