@@ -1077,7 +1077,7 @@ _messageLabel.hidden = YES;
         if (0 == leftFrames) {
             
             /*if (_decoder.isEOF) {
-                
+                // TODO: Attempt to reopen the file cleanly here indefinitely (not pause and return)
                 [self pause];
                 [self updateHUD];
                 return;

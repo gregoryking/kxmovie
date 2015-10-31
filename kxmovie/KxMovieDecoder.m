@@ -1367,8 +1367,8 @@ static int interrupt_callback(void *ctx);
     BOOL finished = NO;
     
     while (!finished) {
-        
-        if (av_read_frame(_formatCtx, &packet) < 0) {
+        int retVal = av_read_frame(_formatCtx, &packet);
+        if (retVal < -35) {
             _isEOF = YES;
             break;
         }
