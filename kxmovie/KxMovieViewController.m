@@ -132,6 +132,8 @@ static NSMutableDictionary * gHistory;
     BOOL                _savedIdleTimer;
     
     NSDictionary        *_parameters;
+    
+    NSString            *_path;
 }
 
 @property (readwrite) BOOL playing;
@@ -164,7 +166,7 @@ static NSMutableDictionary * gHistory;
     
     self = [super initWithNibName:nil bundle:nil];
     if (self) {
-        
+        _path = path;
         _moviePosition = 0;
 //        self.wantsFullScreenLayout = YES;
 
@@ -196,6 +198,40 @@ static NSMutableDictionary * gHistory;
         });
     }
     return self;
+}
+
+- (void) restart
+{
+    [_decoder closeFile];
+    _decoder = nil;
+    _moviePosition = 0;
+    //        self.wantsFullScreenLayout = YES;
+ 
+    __weak KxMovieViewController *weakSelf = self;
+    KxMovieDecoder *decoder = [[KxMovieDecoder alloc] init];
+    _decoder = decoder;
+    
+    decoder.interruptCallback = ^BOOL(){
+        
+        __strong KxMovieViewController *strongSelf = weakSelf;
+        return strongSelf ? [strongSelf interruptDecoder] : YES;
+    };
+    
+    dispatch_async(dispatch_get_global_queue(0, 0), ^{
+        
+        NSError *error = nil;
+        [decoder openFile:_path error:&error];
+        
+        __strong KxMovieViewController *strongSelf = weakSelf;
+        if (strongSelf) {
+            
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                
+                [self restorePlay];
+//                [strongSelf setMovieDecoder:decoder withError:error];
+            });
+        }
+    });
 }
 
 - (void) dealloc
@@ -1076,12 +1112,15 @@ _messageLabel.hidden = YES;
         
         if (0 == leftFrames) {
             
-            /*if (_decoder.isEOF) {
+            if (_decoder.isEOF) {
                 // TODO: Attempt to reopen the file cleanly here indefinitely (not pause and return)
-                [self pause];
-                [self updateHUD];
+                self.playing = NO;
+                [self restart];
                 return;
-            }*/
+//                [self pause];
+//                [self updateHUD];
+//                return;
+            }
             
             if (_minBufferedDuration > 0 && !_buffered) {
                                 
@@ -1151,6 +1190,9 @@ _messageLabel.hidden = YES;
             if (_videoFrames.count > 0) {
                 
                 frame = _videoFrames[0];
+                if ([frame format] == KxVideoFrameFormatRGB) {
+                    UIImage *test = [(KxVideoFrameRGB *)frame asImage];
+                }
                 [_videoFrames removeObjectAtIndex:0];
                 _bufferedDuration -= frame.duration;
             }
