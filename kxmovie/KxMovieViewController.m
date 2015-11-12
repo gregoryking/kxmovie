@@ -203,13 +203,12 @@ static NSMutableDictionary * gHistory;
 - (void) restart
 {
     [_decoder closeFile];
-    _decoder = nil;
+//    _decoder = nil;
     _moviePosition = 0;
     //        self.wantsFullScreenLayout = YES;
  
     __weak KxMovieViewController *weakSelf = self;
     KxMovieDecoder *decoder = [[KxMovieDecoder alloc] init];
-    _decoder = decoder;
     
     decoder.interruptCallback = ^BOOL(){
         
@@ -227,8 +226,7 @@ static NSMutableDictionary * gHistory;
             
             dispatch_sync(dispatch_get_main_queue(), ^{
                 
-                [self restorePlay];
-//                [strongSelf setMovieDecoder:decoder withError:error];
+                [strongSelf resetMovieDecoder:decoder withError:error];
             });
         }
     });
@@ -721,9 +719,6 @@ _messageLabel.hidden = YES;
                 
                 [_activityIndicatorView stopAnimating];
                 
-                // Force to be minimal latecny
-                [self setMoviePosition:_moviePosition+0.0];
-
                 // if (self.view.window)
                 [self restorePlay];
             }
@@ -739,6 +734,84 @@ _messageLabel.hidden = YES;
          }
     }
 }
+
+- (void) resetMovieDecoder: (KxMovieDecoder *) decoder
+               withError: (NSError *) error
+{
+    LoggerStream(2, @"setMovieDecoder");
+    
+    if (!error && decoder) {
+        
+        _decoder        = decoder;
+        _dispatchQueue  = dispatch_queue_create("KxMovie", DISPATCH_QUEUE_SERIAL);
+        _videoFrames    = [NSMutableArray array];
+        _audioFrames    = [NSMutableArray array];
+        
+        if (_decoder.subtitleStreamsCount) {
+            _subtitles = [NSMutableArray array];
+        }
+        
+        if (_decoder.isNetwork) {
+            
+            _minBufferedDuration = NETWORK_MIN_BUFFERED_DURATION;
+            _maxBufferedDuration = NETWORK_MAX_BUFFERED_DURATION;
+            
+        } else {
+            
+            _minBufferedDuration = LOCAL_MIN_BUFFERED_DURATION;
+            _maxBufferedDuration = LOCAL_MAX_BUFFERED_DURATION;
+        }
+        
+        if (!_decoder.validVideo)
+            _minBufferedDuration *= 10.0; // increase for audio
+        
+        // allow to tweak some parameters at runtime
+        if (_parameters.count) {
+            
+            id val;
+            
+            val = [_parameters valueForKey: KxMovieParameterMinBufferedDuration];
+            if ([val isKindOfClass:[NSNumber class]])
+                _minBufferedDuration = [val floatValue];
+            
+            val = [_parameters valueForKey: KxMovieParameterMaxBufferedDuration];
+            if ([val isKindOfClass:[NSNumber class]])
+                _maxBufferedDuration = [val floatValue];
+            
+            val = [_parameters valueForKey: KxMovieParameterDisableDeinterlacing];
+            if ([val isKindOfClass:[NSNumber class]])
+                _decoder.disableDeinterlacing = [val boolValue];
+            
+            if (_maxBufferedDuration < _minBufferedDuration)
+                _maxBufferedDuration = _minBufferedDuration * 2;
+        }
+        
+        LoggerStream(2, @"buffered limit: %.1f - %.1f", _minBufferedDuration, _maxBufferedDuration);
+        
+        if (self.isViewLoaded) {
+            
+            [self setupPresentView];
+            
+            if (_activityIndicatorView.isAnimating) {
+                
+                [_activityIndicatorView stopAnimating];
+                
+                // if (self.view.window)
+                [self restorePlay];
+            }
+        }
+        
+    } else {
+        
+        if (self.isViewLoaded && self.view.window) {
+            
+            [_activityIndicatorView stopAnimating];
+            if (!_interrupted)
+                [self handleDecoderMovieError: error];
+        }
+    }
+}
+
 
 - (void) restorePlay
 {
@@ -1093,6 +1166,11 @@ _messageLabel.hidden = YES;
 
 - (void) tick
 {
+    NSMutableArray *temp = _videoFrames;
+    if(temp.count){
+        KxVideoFrame *tempVideoFrame = temp[0];
+        LoggerStream(1, @"_moviePosition %.2f _videoFrame position %.2f ", _moviePosition, tempVideoFrame.position);
+    }
     if (_buffered && ((_bufferedDuration > _minBufferedDuration) || _decoder.isEOF)) {
         
         _tickCorrectionTime = 0;
@@ -1110,11 +1188,12 @@ _messageLabel.hidden = YES;
         (_decoder.validVideo ? _videoFrames.count : 0) +
         (_decoder.validAudio ? _audioFrames.count : 0);
         
-        if (0 == leftFrames) {
+        if (0 == leftFrames || _decoder.isEOF) {
             
             if (_decoder.isEOF) {
                 // TODO: Attempt to reopen the file cleanly here indefinitely (not pause and return)
                 self.playing = NO;
+                [_activityIndicatorView startAnimating];
                 [self restart];
                 return;
 //                [self pause];
@@ -1170,7 +1249,6 @@ _messageLabel.hidden = YES;
     LoggerStream(1, @"CORRECTION ON CALL IS %.2f", correction);
 #endif
     if (correction > 0.5f || correction < -0.5f) {
-        [self setMoviePosition:_moviePosition+0.0];
         LoggerStream(1, @"tick correction reset %.2f", correction);
     }
     
