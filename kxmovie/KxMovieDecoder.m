@@ -17,6 +17,7 @@
 #include "libavutil/pixdesc.h"
 #import "KxAudioManager.h"
 #import "KxLogger.h"
+#import <UIKit/UIKit.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 NSString * kxmovieErrorDomain = @"ru.kolyvan.kxmovie";
@@ -1403,6 +1404,11 @@ static int interrupt_callback(void *ctx);
                     }
                     
                     KxVideoFrame *frame = [self handleVideoFrame];
+                    if(!_startRunTime) {
+                        _startRunTime = [[NSDate new] timeIntervalSince1970];
+                    }
+                    NSTimeInterval elapsedTime = [[NSDate new] timeIntervalSince1970] - self.startRunTime;
+                    LoggerStream(0, @"DRIFT: %.3f",frame.position - elapsedTime);
                     if (frame) {
                         
                         [result addObject:frame];
