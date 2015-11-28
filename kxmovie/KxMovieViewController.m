@@ -203,7 +203,10 @@ static NSMutableDictionary * gHistory;
 - (void) restart
 {
     [_decoder closeFile];
-//    _decoder = nil;
+    _decoder = nil;
+    [_glView removeFromSuperview];
+    _glView = nil;
+    
     _moviePosition = 0;
     //        self.wantsFullScreenLayout = YES;
  
@@ -219,7 +222,11 @@ static NSMutableDictionary * gHistory;
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
         
         NSError *error = nil;
-        [decoder openFile:_path error:&error];
+        BOOL opened = NO;
+        while (!opened) {
+            opened = [decoder openFile:_path error:nil];
+        }
+
         
         __strong KxMovieViewController *strongSelf = weakSelf;
         if (strongSelf) {
@@ -719,6 +726,9 @@ _messageLabel.hidden = YES;
                 
                 [_activityIndicatorView stopAnimating];
                 
+                // Force to be minimal latecny
+                [self setMoviePosition:_moviePosition+0.0];
+
                 // if (self.view.window)
                 [self restorePlay];
             }
@@ -797,6 +807,7 @@ _messageLabel.hidden = YES;
                 [_activityIndicatorView stopAnimating];
                 
                 // if (self.view.window)
+                [self setMoviePosition:_moviePosition+0.0];
                 [self restorePlay];
             }
         }
@@ -901,6 +912,7 @@ _messageLabel.hidden = YES;
 - (void) setupUserInteraction
 {
     UIView * view = [self frameView];
+
     view.userInteractionEnabled = YES;
     
     _tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap:)];
@@ -1249,6 +1261,7 @@ _messageLabel.hidden = YES;
     LoggerStream(1, @"CORRECTION ON CALL IS %.2f", correction);
 #endif
     if (correction > 0.5f || correction < -0.5f) {
+        [self setMoviePosition:_moviePosition+0.0];
         LoggerStream(1, @"tick correction reset %.2f", correction);
     }
     
