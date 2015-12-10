@@ -1405,9 +1405,9 @@ static int interrupt_callback(void *ctx);
                     
                     KxVideoFrame *frame = [self handleVideoFrame];
                     if(!_startRunTime) {
-                        _startRunTime = [[NSDate new] timeIntervalSince1970];
+                        _startRunTime = [NSDate timeIntervalSinceReferenceDate];
                     }
-                    NSTimeInterval elapsedTime = [[NSDate new] timeIntervalSince1970] - self.startRunTime;
+                    NSTimeInterval elapsedTime = [NSDate timeIntervalSinceReferenceDate] - self.startRunTime;
                     LoggerStream(0, @"DRIFT: %.3f",frame.position - elapsedTime);
                     if (frame) {
                         

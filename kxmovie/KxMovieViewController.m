@@ -175,9 +175,17 @@ static NSMutableDictionary * gHistory;
         __weak KxMovieViewController *weakSelf = self;
         
         KxMovieDecoder *decoder = [[KxMovieDecoder alloc] init];
-        
+        NSString *testString = @"Greggy";
         decoder.interruptCallback = ^BOOL(){
             
+            if(decoder.startRunTime != 0) {
+                NSTimeInterval elapsedTime = [NSDate timeIntervalSinceReferenceDate] -decoder.startRunTime;
+                NSTimeInterval delta = elapsedTime - decoder.position;
+                if(delta >10){
+                    LoggerStream(1, @"interrupting...");
+                    return YES;
+                }
+            }
             __strong KxMovieViewController *strongSelf = weakSelf;
             return strongSelf ? [strongSelf interruptDecoder] : YES;
         };
@@ -202,6 +210,7 @@ static NSMutableDictionary * gHistory;
 
 - (void) restart
 {
+    [_activityIndicatorView startAnimating];
     [_decoder closeFile];
     _decoder = nil;
     [_glView removeFromSuperview];
@@ -215,9 +224,18 @@ static NSMutableDictionary * gHistory;
     
     decoder.interruptCallback = ^BOOL(){
         
+        if(decoder.startRunTime != 0) {
+            NSTimeInterval elapsedTime = [NSDate timeIntervalSinceReferenceDate] -decoder.startRunTime;
+            NSTimeInterval delta = elapsedTime - decoder.position;
+            if(delta >10){
+                LoggerStream(1, @"interrupting...");
+                return YES;
+            }
+        }
         __strong KxMovieViewController *strongSelf = weakSelf;
         return strongSelf ? [strongSelf interruptDecoder] : YES;
     };
+
     
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
         
@@ -724,7 +742,7 @@ _messageLabel.hidden = YES;
             
             if (_activityIndicatorView.isAnimating) {
                 
-                [_activityIndicatorView stopAnimating];
+//                [_activityIndicatorView stopAnimating];
                 
                 // Force to be minimal latecny
                 [self setMoviePosition:_moviePosition+0.0];
@@ -1666,6 +1684,11 @@ _messageLabel.hidden = YES;
 
 - (void) handleDecoderMovieError: (NSError *) error
 {
+    if (error.code == 1) {
+        [self restart];
+        return;
+    }
+    
     UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Failure", nil)
                                                         message:[error localizedDescription]
                                                        delegate:nil
