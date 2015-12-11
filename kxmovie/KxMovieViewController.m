@@ -241,7 +241,7 @@ static NSMutableDictionary * gHistory;
         
         NSError *error = nil;
         BOOL opened = NO;
-        while (!opened) {
+        while (!opened && !_interrupted) {
             opened = [decoder openFile:_path error:nil];
         }
 
