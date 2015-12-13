@@ -175,7 +175,7 @@ static NSMutableDictionary * gHistory;
         __weak KxMovieViewController *weakSelf = self;
         
         KxMovieDecoder *decoder = [[KxMovieDecoder alloc] init];
-        NSString *testString = @"Greggy";
+
         decoder.interruptCallback = ^BOOL(){
             
             if(decoder.startRunTime != 0) {
@@ -1197,10 +1197,6 @@ _messageLabel.hidden = YES;
 - (void) tick
 {
     NSMutableArray *temp = _videoFrames;
-    if(temp.count){
-        KxVideoFrame *tempVideoFrame = temp[0];
-        LoggerStream(1, @"_moviePosition %.2f _videoFrame position %.2f ", _moviePosition, tempVideoFrame.position);
-    }
     if (_buffered && ((_bufferedDuration > _minBufferedDuration) || _decoder.isEOF)) {
         
         _tickCorrectionTime = 0;
@@ -1275,9 +1271,7 @@ _messageLabel.hidden = YES;
     NSTimeInterval dPosition = _moviePosition - _tickCorrectionPosition;
     NSTimeInterval dTime = now - _tickCorrectionTime;
     NSTimeInterval correction = dPosition - dTime;
-#ifdef DEBUG
-    LoggerStream(1, @"CORRECTION ON CALL IS %.2f", correction);
-#endif
+    
     if (correction > 0.5f || correction < -0.5f) {
         [self setMoviePosition:_moviePosition+0.0];
         LoggerStream(1, @"tick correction reset %.2f", correction);

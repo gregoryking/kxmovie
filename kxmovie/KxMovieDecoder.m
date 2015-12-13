@@ -1407,8 +1407,6 @@ static int interrupt_callback(void *ctx);
                     if(!_startRunTime) {
                         _startRunTime = [NSDate timeIntervalSinceReferenceDate];
                     }
-                    NSTimeInterval elapsedTime = [NSDate timeIntervalSinceReferenceDate] - self.startRunTime;
-                    LoggerStream(0, @"DRIFT: %.3f",frame.position - elapsedTime);
                     if (frame) {
                         
                         [result addObject:frame];
