@@ -1493,9 +1493,6 @@ _messageLabel.hidden = YES;
         
     [[UIApplication sharedApplication] setIdleTimerDisabled:_hiddenHUD];
 
-
-    
-
     [UIView animateWithDuration:0.2
                           delay:0.0
                         options:UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionTransitionNone
