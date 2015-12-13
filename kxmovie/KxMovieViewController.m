@@ -67,7 +67,7 @@ static NSMutableDictionary * gHistory;
 
 #define LOCAL_MIN_BUFFERED_DURATION   0.2
 #define LOCAL_MAX_BUFFERED_DURATION   0.4
-#define NETWORK_MIN_BUFFERED_DURATION 0.0
+#define NETWORK_MIN_BUFFERED_DURATION 0.00001
 #define NETWORK_MAX_BUFFERED_DURATION 0.0001
 
 @interface KxMovieViewController () {
@@ -132,6 +132,8 @@ static NSMutableDictionary * gHistory;
     BOOL                _savedIdleTimer;
     
     NSDictionary        *_parameters;
+    
+    NSString            *_path;
 }
 
 @property (readwrite) BOOL playing;
@@ -164,7 +166,7 @@ static NSMutableDictionary * gHistory;
     
     self = [super initWithNibName:nil bundle:nil];
     if (self) {
-        
+        _path = path;
         _moviePosition = 0;
 //        self.wantsFullScreenLayout = YES;
 
@@ -173,9 +175,17 @@ static NSMutableDictionary * gHistory;
         __weak KxMovieViewController *weakSelf = self;
         
         KxMovieDecoder *decoder = [[KxMovieDecoder alloc] init];
-        
+
         decoder.interruptCallback = ^BOOL(){
             
+            if(decoder.startRunTime != 0) {
+                NSTimeInterval elapsedTime = [NSDate timeIntervalSinceReferenceDate] -decoder.startRunTime;
+                NSTimeInterval delta = elapsedTime - decoder.position;
+                if(delta >1){
+                    LoggerStream(1, @"interrupting...");
+                    return YES;
+                }
+            }
             __strong KxMovieViewController *strongSelf = weakSelf;
             return strongSelf ? [strongSelf interruptDecoder] : YES;
         };
@@ -196,6 +206,55 @@ static NSMutableDictionary * gHistory;
         });
     }
     return self;
+}
+
+- (void) restart
+{
+    [_activityIndicatorView startAnimating];
+    [_decoder closeFile];
+    _decoder = nil;
+    [_glView removeFromSuperview];
+    _glView = nil;
+    
+    _moviePosition = 0;
+    //        self.wantsFullScreenLayout = YES;
+ 
+    __weak KxMovieViewController *weakSelf = self;
+    KxMovieDecoder *decoder = [[KxMovieDecoder alloc] init];
+    
+    decoder.interruptCallback = ^BOOL(){
+        
+        if(decoder.startRunTime != 0) {
+            NSTimeInterval elapsedTime = [NSDate timeIntervalSinceReferenceDate] -decoder.startRunTime;
+            NSTimeInterval delta = elapsedTime - decoder.position;
+            if(delta >10){
+                LoggerStream(1, @"interrupting...");
+                return YES;
+            }
+        }
+        __strong KxMovieViewController *strongSelf = weakSelf;
+        return strongSelf ? [strongSelf interruptDecoder] : YES;
+    };
+
+    
+    dispatch_async(dispatch_get_global_queue(0, 0), ^{
+        
+        NSError *error = nil;
+        BOOL opened = NO;
+        while (!opened && !_interrupted) {
+            opened = [decoder openFile:_path error:nil];
+        }
+
+        
+        __strong KxMovieViewController *strongSelf = weakSelf;
+        if (strongSelf) {
+            
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                
+                [strongSelf resetMovieDecoder:decoder withError:error];
+            });
+        }
+    });
 }
 
 - (void) dealloc
@@ -260,7 +319,10 @@ _messageLabel.hidden = YES;
     [self.view addSubview:_topBar];
     [self.view addSubview:_topHUD];
     [self.view addSubview:_bottomBar];
-
+    
+    _bottomBar.hidden = YES;
+    _topBar.hidden = YES;
+    
     // top hud
 
     _doneButton = [UIButton buttonWithType:UIButtonTypeCustom];
@@ -284,14 +346,14 @@ _messageLabel.hidden = YES;
     _progressLabel.text = @"";
     _progressLabel.font = [UIFont systemFontOfSize:12];
     
-    _progressSlider = [[UISlider alloc] initWithFrame:CGRectMake(100, 2, width-197, topH)];
+    _progressSlider = [[UISlider alloc] initWithFrame:CGRectMake(100, 2, width-157, topH)];
     _progressSlider.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     _progressSlider.continuous = NO;
     _progressSlider.value = 0;
 //    [_progressSlider setThumbImage:[UIImage imageNamed:@"kxmovie.bundle/sliderthumb"]
 //                          forState:UIControlStateNormal];
 
-    _leftLabel = [[UILabel alloc] initWithFrame:CGRectMake(width-92, 1, 60, topH)];
+    _leftLabel = [[UILabel alloc] initWithFrame:CGRectMake(width-52, 1, 40, topH)];
     _leftLabel.backgroundColor = [UIColor clearColor];
     _leftLabel.opaque = NO;
     _leftLabel.adjustsFontSizeToFitWidth = NO;
@@ -408,7 +470,7 @@ _messageLabel.hidden = YES;
     
     _savedIdleTimer = [[UIApplication sharedApplication] isIdleTimerDisabled];
     
-    [self showHUD: YES];
+    [self showHUD: NO];
     
     if (_decoder) {
         
@@ -464,7 +526,7 @@ _messageLabel.hidden = YES;
 
 - (void) applicationWillResignActive: (NSNotification *)notification
 {
-    [self showHUD:YES];
+    [self showHUD:NO];
     [self pause];
     
     LoggerStream(1, @"applicationWillResignActive");
@@ -683,11 +745,11 @@ _messageLabel.hidden = YES;
             
             if (_activityIndicatorView.isAnimating) {
                 
-                [_activityIndicatorView stopAnimating];
+//                [_activityIndicatorView stopAnimating];
                 
                 // Force to be minimal latecny
                 [self setMoviePosition:_moviePosition+0.0];
-                
+
                 // if (self.view.window)
                 [self restorePlay];
             }
@@ -703,6 +765,85 @@ _messageLabel.hidden = YES;
          }
     }
 }
+
+- (void) resetMovieDecoder: (KxMovieDecoder *) decoder
+               withError: (NSError *) error
+{
+    LoggerStream(2, @"setMovieDecoder");
+    
+    if (!error && decoder) {
+        
+        _decoder        = decoder;
+        _dispatchQueue  = dispatch_queue_create("KxMovie", DISPATCH_QUEUE_SERIAL);
+        _videoFrames    = [NSMutableArray array];
+        _audioFrames    = [NSMutableArray array];
+        
+        if (_decoder.subtitleStreamsCount) {
+            _subtitles = [NSMutableArray array];
+        }
+        
+        if (_decoder.isNetwork) {
+            
+            _minBufferedDuration = NETWORK_MIN_BUFFERED_DURATION;
+            _maxBufferedDuration = NETWORK_MAX_BUFFERED_DURATION;
+            
+        } else {
+            
+            _minBufferedDuration = LOCAL_MIN_BUFFERED_DURATION;
+            _maxBufferedDuration = LOCAL_MAX_BUFFERED_DURATION;
+        }
+        
+        if (!_decoder.validVideo)
+            _minBufferedDuration *= 10.0; // increase for audio
+        
+        // allow to tweak some parameters at runtime
+        if (_parameters.count) {
+            
+            id val;
+            
+            val = [_parameters valueForKey: KxMovieParameterMinBufferedDuration];
+            if ([val isKindOfClass:[NSNumber class]])
+                _minBufferedDuration = [val floatValue];
+            
+            val = [_parameters valueForKey: KxMovieParameterMaxBufferedDuration];
+            if ([val isKindOfClass:[NSNumber class]])
+                _maxBufferedDuration = [val floatValue];
+            
+            val = [_parameters valueForKey: KxMovieParameterDisableDeinterlacing];
+            if ([val isKindOfClass:[NSNumber class]])
+                _decoder.disableDeinterlacing = [val boolValue];
+            
+            if (_maxBufferedDuration < _minBufferedDuration)
+                _maxBufferedDuration = _minBufferedDuration * 2;
+        }
+        
+        LoggerStream(2, @"buffered limit: %.1f - %.1f", _minBufferedDuration, _maxBufferedDuration);
+        
+        if (self.isViewLoaded) {
+            
+            [self setupPresentView];
+            
+            if (_activityIndicatorView.isAnimating) {
+                
+                [_activityIndicatorView stopAnimating];
+                
+                // if (self.view.window)
+                [self setMoviePosition:_moviePosition+0.0];
+                [self restorePlay];
+            }
+        }
+        
+    } else {
+        
+        if (self.isViewLoaded && self.view.window) {
+            
+            [_activityIndicatorView stopAnimating];
+            if (!_interrupted)
+                [self handleDecoderMovieError: error];
+        }
+    }
+}
+
 
 - (void) restorePlay
 {
@@ -755,12 +896,12 @@ _messageLabel.hidden = YES;
         CGRect frame;
         
         frame = _leftLabel.frame;
-        frame.origin.x += 40;
-        frame.size.width -= 40;
+        frame.origin.x += 0;
+        frame.size.width -= 0;
         _leftLabel.frame = frame;
         
         frame =_progressSlider.frame;
-        frame.size.width += 40;
+        frame.size.width += 0;
         _progressSlider.frame = frame;
         
     } else {
@@ -792,6 +933,7 @@ _messageLabel.hidden = YES;
 - (void) setupUserInteraction
 {
     UIView * view = [self frameView];
+
     view.userInteractionEnabled = YES;
     
     _tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap:)];
@@ -1057,6 +1199,7 @@ _messageLabel.hidden = YES;
 
 - (void) tick
 {
+    NSMutableArray *temp = _videoFrames;
     if (_buffered && ((_bufferedDuration > _minBufferedDuration) || _decoder.isEOF)) {
         
         _tickCorrectionTime = 0;
@@ -1074,13 +1217,24 @@ _messageLabel.hidden = YES;
         (_decoder.validVideo ? _videoFrames.count : 0) +
         (_decoder.validAudio ? _audioFrames.count : 0);
         
-        if (0 == leftFrames) {
+        if (0 == leftFrames || _decoder.isEOF) {
             
+            if (_decoder.isEOF) {
+                // TODO: Attempt to reopen the file cleanly here indefinitely (not pause and return)
+                self.playing = NO;
+                [_activityIndicatorView startAnimating];
+                [self restart];
+                return;
+//                [self pause];
+//                [self updateHUD];
+//                return;
+            }
             
             if (_minBufferedDuration > 0 && !_buffered) {
                                 
                 _buffered = YES;
                 [_activityIndicatorView startAnimating];
+                self.decoding = NO;
             }
         }
         
@@ -1121,13 +1275,9 @@ _messageLabel.hidden = YES;
     NSTimeInterval dTime = now - _tickCorrectionTime;
     NSTimeInterval correction = dPosition - dTime;
     
-    //if ((_tickCounter % 200) == 0)
-    //    LoggerStream(1, @"tick correction %.4f", correction);
-    
-    if (correction > 1.f || correction < -1.f) {
-        
-        LoggerStream(1, @"tick correction reset %.2f", correction);
+    if (correction > 0.5f || correction < -0.5f) {
         [self setMoviePosition:_moviePosition+0.0];
+        LoggerStream(1, @"tick correction reset %.2f", correction);
     }
     
     return correction;
@@ -1146,6 +1296,9 @@ _messageLabel.hidden = YES;
             if (_videoFrames.count > 0) {
                 
                 frame = _videoFrames[0];
+                if ([frame format] == KxVideoFrameFormatRGB) {
+                    UIImage *test = [(KxVideoFrameRGB *)frame asImage];
+                }
                 [_videoFrames removeObjectAtIndex:0];
                 _bufferedDuration -= frame.duration;
             }
@@ -1339,13 +1492,17 @@ _messageLabel.hidden = YES;
     _panGestureRecognizer.enabled = _hiddenHUD;
         
     [[UIApplication sharedApplication] setIdleTimerDisabled:_hiddenHUD];
-    
+
     [UIView animateWithDuration:0.2
                           delay:0.0
                         options:UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionTransitionNone
                      animations:^{
                          
                          CGFloat alpha = _hiddenHUD ? 0 : 1;
+                         if (!_hiddenHUD) {
+                             _topBar.hidden = NO;
+                             _bottomBar.hidden = NO;
+                         }
                          _topBar.alpha = alpha;
                          _topHUD.alpha = alpha;
                          _bottomBar.alpha = alpha;
@@ -1528,6 +1685,11 @@ _messageLabel.hidden = YES;
 
 - (void) handleDecoderMovieError: (NSError *) error
 {
+    if (error.code == 1) {
+        [self restart];
+        return;
+    }
+    
     UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Failure", nil)
                                                         message:[error localizedDescription]
                                                        delegate:nil

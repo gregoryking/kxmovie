@@ -17,6 +17,7 @@
 #include "libavutil/pixdesc.h"
 #import "KxAudioManager.h"
 #import "KxLogger.h"
+#import <UIKit/UIKit.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 NSString * kxmovieErrorDomain = @"ru.kolyvan.kxmovie";
@@ -1367,8 +1368,8 @@ static int interrupt_callback(void *ctx);
     BOOL finished = NO;
     
     while (!finished) {
-        
-        if (av_read_frame(_formatCtx, &packet) < 0) {
+        int retVal = av_read_frame(_formatCtx, &packet);
+        if (retVal < -35) {
             _isEOF = YES;
             break;
         }
@@ -1403,6 +1404,9 @@ static int interrupt_callback(void *ctx);
                     }
                     
                     KxVideoFrame *frame = [self handleVideoFrame];
+                    if(!_startRunTime) {
+                        _startRunTime = [NSDate timeIntervalSinceReferenceDate];
+                    }
                     if (frame) {
                         
                         [result addObject:frame];
