@@ -1493,8 +1493,7 @@ _messageLabel.hidden = YES;
         
     [[UIApplication sharedApplication] setIdleTimerDisabled:_hiddenHUD];
 
-    _topBar.hidden = _hiddenHUD;
-    _bottomBar.hidden = _hiddenHUD;
+
     
 
     [UIView animateWithDuration:0.2
@@ -1503,6 +1502,10 @@ _messageLabel.hidden = YES;
                      animations:^{
                          
                          CGFloat alpha = _hiddenHUD ? 0 : 1;
+                         if (!_hiddenHUD) {
+                             _topBar.hidden = NO;
+                             _bottomBar.hidden = NO;
+                         }
                          _topBar.alpha = alpha;
                          _topHUD.alpha = alpha;
                          _bottomBar.alpha = alpha;
