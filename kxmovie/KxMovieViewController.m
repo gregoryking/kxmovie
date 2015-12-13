@@ -181,7 +181,7 @@ static NSMutableDictionary * gHistory;
             if(decoder.startRunTime != 0) {
                 NSTimeInterval elapsedTime = [NSDate timeIntervalSinceReferenceDate] -decoder.startRunTime;
                 NSTimeInterval delta = elapsedTime - decoder.position;
-                if(delta >10){
+                if(delta >1){
                     LoggerStream(1, @"interrupting...");
                     return YES;
                 }
@@ -319,7 +319,10 @@ _messageLabel.hidden = YES;
     [self.view addSubview:_topBar];
     [self.view addSubview:_topHUD];
     [self.view addSubview:_bottomBar];
-
+    
+    _bottomBar.hidden = YES;
+    _topBar.hidden = YES;
+    
     // top hud
 
     _doneButton = [UIButton buttonWithType:UIButtonTypeCustom];
@@ -343,14 +346,14 @@ _messageLabel.hidden = YES;
     _progressLabel.text = @"";
     _progressLabel.font = [UIFont systemFontOfSize:12];
     
-    _progressSlider = [[UISlider alloc] initWithFrame:CGRectMake(100, 2, width-197, topH)];
+    _progressSlider = [[UISlider alloc] initWithFrame:CGRectMake(100, 2, width-157, topH)];
     _progressSlider.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     _progressSlider.continuous = NO;
     _progressSlider.value = 0;
 //    [_progressSlider setThumbImage:[UIImage imageNamed:@"kxmovie.bundle/sliderthumb"]
 //                          forState:UIControlStateNormal];
 
-    _leftLabel = [[UILabel alloc] initWithFrame:CGRectMake(width-92, 1, 60, topH)];
+    _leftLabel = [[UILabel alloc] initWithFrame:CGRectMake(width-52, 1, 40, topH)];
     _leftLabel.backgroundColor = [UIColor clearColor];
     _leftLabel.opaque = NO;
     _leftLabel.adjustsFontSizeToFitWidth = NO;
@@ -467,7 +470,7 @@ _messageLabel.hidden = YES;
     
     _savedIdleTimer = [[UIApplication sharedApplication] isIdleTimerDisabled];
     
-    [self showHUD: YES];
+    [self showHUD: NO];
     
     if (_decoder) {
         
@@ -523,7 +526,7 @@ _messageLabel.hidden = YES;
 
 - (void) applicationWillResignActive: (NSNotification *)notification
 {
-    [self showHUD:YES];
+    [self showHUD:NO];
     [self pause];
     
     LoggerStream(1, @"applicationWillResignActive");
@@ -893,12 +896,12 @@ _messageLabel.hidden = YES;
         CGRect frame;
         
         frame = _leftLabel.frame;
-        frame.origin.x += 40;
-        frame.size.width -= 40;
+        frame.origin.x += 0;
+        frame.size.width -= 0;
         _leftLabel.frame = frame;
         
         frame =_progressSlider.frame;
-        frame.size.width += 40;
+        frame.size.width += 0;
         _progressSlider.frame = frame;
         
     } else {
@@ -1489,7 +1492,11 @@ _messageLabel.hidden = YES;
     _panGestureRecognizer.enabled = _hiddenHUD;
         
     [[UIApplication sharedApplication] setIdleTimerDisabled:_hiddenHUD];
+
+    _topBar.hidden = _hiddenHUD;
+    _bottomBar.hidden = _hiddenHUD;
     
+
     [UIView animateWithDuration:0.2
                           delay:0.0
                         options:UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionTransitionNone
